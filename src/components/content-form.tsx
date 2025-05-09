@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useRef, useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import React, { useRef, useEffect, useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -25,7 +25,7 @@ const formSchema = z.object({
 });
 
 export function ContentForm({ onContentAdded }: ContentFormProps) {
-  const [state, formAction] = useFormState(addContentItemAction, { error: undefined, item: undefined, fieldErrors: undefined });
+  const [state, formAction] = useActionState(addContentItemAction, { error: undefined, item: undefined, fieldErrors: undefined });
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
@@ -97,3 +97,4 @@ export function ContentForm({ onContentAdded }: ContentFormProps) {
     </Form>
   );
 }
+
