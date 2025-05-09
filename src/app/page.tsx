@@ -8,59 +8,39 @@ import { ContentForm } from "@/components/content-form";
 import { ContentList } from "@/components/content-list";
 import { ContentPreviewCard } from "@/components/content-preview-card";
 import type { ContentItem, ContentType } from "@/lib/types";
-
-// Mock initial data for demonstration - remove or replace with actual data fetching/storage
-const initialContentItems: ContentItem[] = [
-  {
-    id: "1",
-    url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    title: "Intro to Modern Web Development",
-    type: "youtube",
-    summary: "A comprehensive overview of current web development technologies and practices.",
-    keywords: ["web development", "javascript", "react", "nodejs"],
-    tags: ["lecture", "beginner", "web"],
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
-    previewType: 'iframe',
-  },
-  {
-    id: "2",
-    url: "https://tailwindcss.com/docs/installation",
-    title: "Tailwind CSS Documentation",
-    type: "website",
-    type: "website",
-    summary: "Official documentation for Tailwind CSS, a utility-first CSS framework.",
-    keywords: ["css", "tailwind", "framework", "documentation"],
-    tags: ["reference", "css", "frontend"],
-    createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    previewType: 'iframe',
-  },
-];
-
+import { useToast } from "@/hooks/use-toast";
 
 export default function ContentCuratorPage() {
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
-  const [activeTab, setActiveTab] = useState<ContentType>("youtube");
+  const [activeTab, setActiveTab] = useState<ContentType | "all">("all"); // Changed initial tab to 'all'
   const [isClient, setIsClient] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
-    // Load from localStorage or fetch from API in a real app
     const storedItems = localStorage.getItem("contentItems");
     if (storedItems) {
-      setContentItems(JSON.parse(storedItems));
+      try {
+        const parsedItems = JSON.parse(storedItems);
+        if (Array.isArray(parsedItems)) {
+          setContentItems(parsedItems);
+        } else {
+          setContentItems([]);
+          localStorage.setItem("contentItems", JSON.stringify([])); // Clear invalid data
+        }
+      } catch (error) {
+        console.error("Error parsing content items from localStorage:", error);
+        setContentItems([]);
+        localStorage.setItem("contentItems", JSON.stringify([])); // Clear invalid data
+      }
     } else {
-      // Use initial mock data if nothing in localStorage
-      // setContentItems(initialContentItems); 
-      // For now, start empty unless explicitly using mock.
-      // If you want to start with mock data:
-      // setContentItems(initialContentItems);
-      // localStorage.setItem("contentItems", JSON.stringify(initialContentItems));
+      setContentItems([]); // Start empty if nothing in localStorage
     }
   }, []);
 
   useEffect(() => {
-    if(isClient) {
+    if (isClient) {
       localStorage.setItem("contentItems", JSON.stringify(contentItems));
     }
   }, [contentItems, isClient]);
@@ -82,49 +62,100 @@ export default function ContentCuratorPage() {
     if (selectedContent?.id === itemId) {
       setSelectedContent(null);
     }
+    toast({
+      title: "Content Deleted",
+      description: "The item has been removed from your list.",
+    });
   };
   
   const handleExportHTML = () => {
+    if (!isClient) return;
+    if (contentItems.length === 0) {
+      toast({
+        title: "No Content to Export",
+        description: "Please add some content before exporting.",
+        variant: "destructive",
+      });
+      return;
+    }
     const htmlContent = `
-      <html>
-        <head><title>Content Export</title></head>
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Content Export</title>
+          <style>
+            body { font-family: sans-serif; margin: 20px; line-height: 1.6; }
+            h1 { color: #333; }
+            ul { list-style-type: none; padding: 0; }
+            li { margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+            a { color: #007bff; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+            .item-type { font-size: 0.9em; color: #555; }
+            .item-tags { font-size: 0.9em; color: #777; }
+          </style>
+        </head>
         <body>
           <h1>My Curated Content</h1>
           <ul>
-            ${contentItems.map(item => `<li><a href="${item.url}">${item.title}</a> (${item.type}) - Tags: ${item.tags.join(', ')}</li>`).join('')}
+            ${contentItems.map(item => `
+              <li>
+                <strong><a href="${item.url}" target="_blank" rel="noopener noreferrer">${item.title}</a></strong><br>
+                <span class="item-type">Type: ${item.type}</span><br>
+                <span class="item-url">URL: <a href="${item.url}" target="_blank" rel="noopener noreferrer">${item.url}</a></span><br>
+                ${item.summary ? `<p>Summary: ${item.summary}</p>` : ''}
+                ${item.tags && item.tags.length > 0 ? `<span class="item-tags">Tags: ${item.tags.join(', ')}</span>` : ''}
+              </li>`).join('')}
           </ul>
         </body>
       </html>
     `;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'content_export.html';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    console.log("Exporting HTML...");
+    URL.revokeObjectURL(link.href); // Clean up
+    toast({
+      title: "Export Successful",
+      description: "HTML file has been downloaded.",
+    });
   };
 
   const handleExportDatabase = () => {
+    if (!isClient) return;
+     if (contentItems.length === 0) {
+      toast({
+        title: "No Content to Export",
+        description: "Please add some content before exporting.",
+        variant: "destructive",
+      });
+      return;
+    }
     const jsonContent = JSON.stringify(contentItems, null, 2);
-    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'content_database.json';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    console.log("Exporting Database (JSON)...");
+    URL.revokeObjectURL(link.href); // Clean up
+    toast({
+      title: "Export Successful",
+      description: "JSON database file has been downloaded.",
+    });
   };
 
   const filteredItems = contentItems.filter(item => activeTab === 'all' || item.type === activeTab);
 
   if (!isClient) {
-    // Render a loading state or null until client-side hydration to avoid mismatch
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <p>Loading Content Curator...</p>
+      <div className="flex h-screen w-full items-center justify-center bg-background text-foreground">
+        <p className="text-lg">Loading Content Curator...</p>
       </div>
     );
   }
@@ -137,10 +168,11 @@ export default function ContentCuratorPage() {
             <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
               Content Curator Pro
             </h1>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 onClick={handleExportHTML}
+                className="w-full sm:w-auto"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export HTML
@@ -148,6 +180,7 @@ export default function ContentCuratorPage() {
               <Button
                 variant="default"
                 onClick={handleExportDatabase}
+                className="w-full sm:w-auto"
               >
                 <Database className="mr-2 h-4 w-4" />
                 Export JSON
@@ -156,10 +189,10 @@ export default function ContentCuratorPage() {
           </div>
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentType | 'all')}>
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-              <TabsTrigger value="all" className="flex items-center gap-2"><Globe /> All</TabsTrigger>
-              <TabsTrigger value="youtube" className="flex items-center gap-2"><Youtube /> YouTube</TabsTrigger>
-              <TabsTrigger value="website" className="flex items-center gap-2"><Globe /> Websites</TabsTrigger>
-              <TabsTrigger value="pdf" className="flex items-center gap-2"><FileText /> PDFs</TabsTrigger>
+              <TabsTrigger value="all" className="flex items-center gap-2"><Globe className="h-4 w-4"/> All</TabsTrigger>
+              <TabsTrigger value="youtube" className="flex items-center gap-2"><Youtube className="h-4 w-4"/> YouTube</TabsTrigger>
+              <TabsTrigger value="website" className="flex items-center gap-2"><Globe className="h-4 w-4"/> Websites</TabsTrigger>
+              <TabsTrigger value="pdf" className="flex items-center gap-2"><FileText className="h-4 w-4"/> PDFs</TabsTrigger>
             </TabsList>
           </Tabs>
         </header>
