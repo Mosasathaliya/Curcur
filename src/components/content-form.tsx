@@ -41,8 +41,7 @@ export function ContentForm({ onContentAdded }: ContentFormProps) {
         title: "Content Added",
         description: `"${state.item.title}" has been added to your list.`,
       });
-      rhForm.reset(); 
-      if (formRef.current) formRef.current.reset(); 
+      rhForm.reset();
     } else if (state?.error) {
       toast({
         title: "Error Adding Content",
@@ -63,15 +62,18 @@ export function ContentForm({ onContentAdded }: ContentFormProps) {
       </Button>
     );
   }
+  
+  const onSubmit = (data: z.infer<typeof formSchema>) => {
+    const formData = new FormData();
+    formData.append("url", data.url);
+    formAction(formData);
+  };
 
   return (
     <Form {...rhForm}>
       <form
         ref={formRef}
-        action={formAction}
-        onSubmit={rhForm.handleSubmit(() => {
-          formRef.current?.requestSubmit();
-        })}
+        onSubmit={rhForm.handleSubmit(onSubmit)}
         className="flex w-full flex-col sm:flex-row items-start sm:items-end gap-4"
       >
         <FormField
