@@ -22,9 +22,9 @@ export function ContentList({ items, onViewItem, onDeleteItem }: ContentListProp
 
   return (
     <div className="flex w-full flex-col items-start gap-4">
-      {items.map((item, index) => (
+      {items.map((item) => (
         <ContentItemCard
-          key={`${item.id}-${index}`}
+          key={item.id}
           item={item}
           onView={onViewItem}
           onDelete={onDeleteItem}

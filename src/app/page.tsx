@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function ContentCuratorPage() {
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
-  const [activeTab, setActiveTab] = useState<ContentType | "all">("all"); // Changed initial tab to 'all'
+  const [activeTab, setActiveTab] = useState<ContentType | "all">("all");
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
@@ -27,15 +27,11 @@ export default function ContentCuratorPage() {
           setContentItems(parsedItems);
         } else {
           setContentItems([]);
-          localStorage.setItem("contentItems", JSON.stringify([])); // Clear invalid data
         }
       } catch (error) {
         console.error("Error parsing content items from localStorage:", error);
         setContentItems([]);
-        localStorage.setItem("contentItems", JSON.stringify([])); // Clear invalid data
       }
-    } else {
-      setContentItems([]); // Start empty if nothing in localStorage
     }
   }, []);
 
@@ -118,7 +114,7 @@ export default function ContentCuratorPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(link.href); // Clean up
+    URL.revokeObjectURL(link.href);
     toast({
       title: "Export Successful",
       description: "HTML file has been downloaded.",
@@ -143,7 +139,7 @@ export default function ContentCuratorPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(link.href); // Clean up
+    URL.revokeObjectURL(link.href);
     toast({
       title: "Export Successful",
       description: "JSON database file has been downloaded.",
