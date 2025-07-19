@@ -42,7 +42,14 @@ export default function ContentCuratorPage() {
   }, [contentItems, isClient]);
 
   const handleContentAdded = (newItem: ContentItem) => {
-    setContentItems((prevItems) => [newItem, ...prevItems]);
+    setContentItems((prevItems) => {
+      const newItems = [newItem, ...prevItems];
+      // Filter out duplicates by ID to be safe
+      const uniqueItems = newItems.filter((item, index, self) =>
+        index === self.findIndex((t) => (t.id === item.id))
+      );
+      return uniqueItems;
+    });
   };
 
   const handleViewItem = (item: ContentItem) => {
