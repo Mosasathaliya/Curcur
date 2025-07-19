@@ -1,7 +1,3 @@
-
-"use server";
-
-import { summarizeContent, type SummarizeContentInput } from "@/ai/flows/summarize-content";
 import type { ContentItem, ContentType } from "./types";
 import { z } from "zod";
 
@@ -19,65 +15,42 @@ function determineContentType(url: string): ContentType {
   return "website";
 }
 
-export async function addContentItemAction(
-  prevState: any,
-  formData: FormData
-): Promise<{ item?: ContentItem; error?: string; fieldErrors?: Record<string, string[]> }> {
-  const validatedFields = AddContentItemInputSchema.safeParse({
-    url: formData.get("url"),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      error: "Invalid URL provided.",
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
-    };
-  }
-
-  const { url } = validatedFields.data;
-  const contentType = determineContentType(url);
-
+function generateTitleFromUrl(url: string): string {
   try {
-    const aiInput: SummarizeContentInput = { url };
-    // In a real app, you might want to fetch the page title first
-    // For now, the AI might infer it or we use a placeholder.
-    let title = "Content from " + new URL(url).hostname;
-    let summary = "";
-    let keywords: string[] = [];
-
-    // AI summarization can be slow, handle potential timeout or make it optional
-    try {
-      const aiResult = await summarizeContent(aiInput);
-      summary = aiResult.summary;
-      keywords = aiResult.keywords;
-      if (aiResult.summary && aiResult.summary.length > 5) { // Basic check if summary is meaningful
-        // Try to extract a title from the summary or use a part of it
-        const firstSentence = aiResult.summary.split('.')[0];
-        if (firstSentence && firstSentence.length < 100) {
-          title = firstSentence;
-        }
-      }
-    } catch (aiError) {
-      console.warn("AI summarization failed:", aiError);
-      // Proceed without AI summary if it fails
-      summary = "Summary not available.";
-    }
-
-
-    const newItem: ContentItem = {
-      id: crypto.randomUUID(),
-      url,
-      title: title || "Untitled Content",
-      type: contentType,
-      summary,
-      keywords,
-      tags: [...keywords], // Initial tags from keywords
-      createdAt: new Date().toISOString(),
-      previewType: contentType === 'youtube' || contentType === 'website' ? 'iframe' : 'text',
-    };
-    return { item: newItem };
-  } catch (error) {
-    console.error("Error adding content item:", error);
-    return { error: "Failed to add content. Please try again." };
+    const hostname = new URL(url).hostname.replace("www.", "");
+    return "Content from " + hostname;
+  } catch {
+    return "Untitled Content";
   }
+}
+
+export function createContentItem(url: string): ContentItem {
+  const contentType = determineContentType(url);
+  
+  const newItem: ContentItem = {
+    id: crypto.randomUUID(),
+    url,
+    title: generateTitleFromUrl(url),
+    type: contentType,
+    summary: "",
+    keywords: [],
+    tags: [],
+    createdAt: new Date().toISOString(),
+    previewType: contentType === "youtube" || contentType === "website" ? "iframe" : "text",
+  };
+
+  return newItem;
+}
+
+export function validateUrl(url: string): { success: boolean; error?: string } {
+  const result = AddContentItemInputSchema.safeParse({ url });
+  
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error.flatten().fieldErrors.url?.[0] || "Invalid URL"
+    };
+  }
+  
+  return { success: true };
 }
