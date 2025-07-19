@@ -2,16 +2,17 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Download, Database, Youtube, Globe, FileText } from "@/components/icons";
 import { ContentForm } from "@/components/content-form";
 import { ContentList } from "@/components/content-list";
 import { ContentPreviewCard } from "@/components/content-preview-card";
 import type { ContentItem, ContentType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 export default function ContentCuratorPage() {
-  const [contentItems, setContentItems] = useState<ContentItem[]>([]);
+  const [contentItems, setContentItems] = useLocalStorage<ContentItem[]>("contentItems", []);
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
   const [activeTab, setActiveTab] = useState<ContentType | "all">("all");
   const [isClient, setIsClient] = useState(false);
@@ -19,36 +20,15 @@ export default function ContentCuratorPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const storedItems = localStorage.getItem("contentItems");
-    if (storedItems) {
-      try {
-        const parsedItems = JSON.parse(storedItems);
-        if (Array.isArray(parsedItems)) {
-          setContentItems(parsedItems);
-        } else {
-          setContentItems([]);
-        }
-      } catch (error) {
-        console.error("Error parsing content items from localStorage:", error);
-        setContentItems([]);
-      }
-    }
   }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem("contentItems", JSON.stringify(contentItems));
-    }
-  }, [contentItems, isClient]);
 
   const handleContentAdded = (newItem: ContentItem) => {
     setContentItems((prevItems) => {
-      const newItems = [newItem, ...prevItems];
-      // Filter out duplicates by ID to be safe
-      const uniqueItems = newItems.filter((item, index, self) =>
-        index === self.findIndex((t) => (t.id === item.id))
-      );
-      return uniqueItems;
+      // Prevent adding duplicates
+      if (prevItems.find(item => item.id === newItem.id)) {
+        return prevItems;
+      }
+      return [newItem, ...prevItems];
     });
   };
 
