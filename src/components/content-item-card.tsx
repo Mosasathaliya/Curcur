@@ -31,6 +31,7 @@ const typeIconVariantMapping: Record<ContentType, 'primary' | 'neutral' | 'accen
 
 export function ContentItemCard({ item, onView, onDelete }: ContentItemCardProps) {
   const IconComponent = typeIconMapping[item.type] || Globe;
+  const createdAtDate = item.createdAt ? new Date(item.createdAt) : null;
 
   return (
     <Card className="w-full shadow-md hover:shadow-lg transition-shadow duration-300">
@@ -71,9 +72,11 @@ export function ContentItemCard({ item, onView, onDelete }: ContentItemCardProps
           </div>
         )}
       </CardContent>
-      <CardFooter className="text-xs text-muted-foreground pt-2 pb-3">
-        Added on {new Date(item.createdAt).toLocaleDateString()}
-      </CardFooter>
+      {createdAtDate && (
+        <CardFooter className="text-xs text-muted-foreground pt-2 pb-3">
+          Added on {createdAtDate.toLocaleDateString()}
+        </CardFooter>
+      )}
     </Card>
   );
 }
